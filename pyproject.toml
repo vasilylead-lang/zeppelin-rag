@@ -1,0 +1,41 @@
+[project]
+name = "zeppelin-rag"
+version = "0.1.0"
+description = "Corrective RAG over a zeppelin knowledge base (LangGraph + Claude), evaluated with RAGAS"
+readme = "README.md"
+authors = [
+    { name = "vasily", email = "vasily.lead@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.8.0",
+    "fastembed>=0.8.1",
+    "langchain-community>=0.4,<0.4.2",
+    "langgraph>=1.2.12",
+    "numpy>=2.5.3",
+    "python-dotenv>=1.2.3",
+    "ragas>=0.4.3",
+]
+
+[project.scripts]
+zeppelin-ask = "zeppelin_rag.cli:main"
+zeppelin-eval = "zeppelin_rag.evaluate:main"
+
+[build-system]
+requires = ["uv_build>=0.12.14,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
