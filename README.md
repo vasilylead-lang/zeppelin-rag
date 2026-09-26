@@ -90,6 +90,15 @@ uv run zeppelin-eval --limit 3  # быстрый прогон
 
 При первом запуске fastembed скачивает модель эмбеддингов (~220 МБ).
 
+Если проект лежит в папке, которая синхронизируется с iCloud (например, `~/Documents`),
+iCloud помечает файлы `.venv` скрытыми. Python 3.12.12+ пропускает скрытые `.pth`, и
+команды падают с `ModuleNotFoundError: No module named 'zeppelin_rag'`. Держите окружение
+в папке, которую iCloud не синхронизирует:
+
+```bash
+rm -rf .venv && mkdir .venv.nosync && ln -s .venv.nosync .venv && uv sync
+```
+
 ## Настройки
 
 Всё задаётся переменными окружения, полный список — в [.env.example](.env.example).

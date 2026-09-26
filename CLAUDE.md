@@ -24,6 +24,7 @@ Corrective RAG over a Russian-language Markdown knowledge base about zeppelins.
 ## Gotchas
 
 - `make_judge` overwrites `judge.model_args`. RAGAS defaults send `temperature` and `top_p`, which current Claude models reject. Instructor forces `tool_choice`, which requires `thinking: disabled`. Keep that override when changing the judge model.
+- The repo sits in iCloud-synced `~/Documents`. iCloud sets the macOS `hidden` flag on everything in a real `.venv` directory, and Python 3.12.12+ skips hidden `.pth` files, so the editable install breaks with `ModuleNotFoundError: zeppelin_rag`. Here `.venv` is a symlink to `.venv.nosync/`, which iCloud ignores. Never recreate `.venv` as a plain directory. Diagnose with `ls -lO .venv/lib/python3.12/site-packages/*.pth`.
 - `langchain-community` is pinned `<0.4.2`: 0.4.2 removed `chat_models.vertexai`, which `ragas` 0.4.3 imports at load time.
 - Model IDs and settings live in `config.py` `Settings` and can be overridden with `ZEPPELIN_*` env vars (see `.env.example`).
 - Knowledge base and test set are in Russian. When editing facts, keep `data/eval/testset.jsonl` reference answers consistent with `data/knowledge/`.
