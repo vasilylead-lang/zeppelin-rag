@@ -75,6 +75,10 @@ uv sync
 cp .env.example .env   # вписать ANTHROPIC_API_KEY
 ```
 
+Если ключ не привязан к workspace и API отвечает `must include the anthropic-workspace-id
+header`, добавьте в `.env` строку `ANTHROPIC_WORKSPACE_ID=wrkspc_...` или создайте ключ
+внутри нужного workspace.
+
 Задать вопрос:
 
 ```bash

@@ -38,7 +38,10 @@ def make_judge(settings: Settings):
     from anthropic import AsyncAnthropic
     from ragas.llms import llm_factory
 
-    judge = llm_factory(settings.judge_model, provider="anthropic", client=AsyncAnthropic())
+    from zeppelin_rag.llm import client_options
+
+    client = AsyncAnthropic(**client_options())
+    judge = llm_factory(settings.judge_model, provider="anthropic", client=client)
     # RAGAS defaults to temperature=0.01 and top_p=0.1; current Claude models reject
     # sampling parameters. Instructor forces a tool call, which requires thinking off.
     judge.model_args = {"max_tokens": 8192, "thinking": {"type": "disabled"}}

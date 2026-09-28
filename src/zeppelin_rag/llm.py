@@ -1,5 +1,6 @@
 """Claude calls used by the graph nodes (official Anthropic SDK)."""
 
+import os
 from typing import Protocol
 
 import anthropic
@@ -45,6 +46,12 @@ class RagLLM(Protocol):
     def answer(self, question: str, chunks: list[Chunk]) -> str: ...
 
 
+def client_options() -> dict:
+    """Keys not scoped to a workspace must name one via the anthropic-workspace-id header."""
+    workspace = os.getenv("ANTHROPIC_WORKSPACE_ID")
+    return {"default_headers": {"anthropic-workspace-id": workspace}} if workspace else {}
+
+
 def format_context(chunks: list[Chunk]) -> str:
     return "\n\n".join(f"[{i}] {chunk.text}" for i, chunk in enumerate(chunks, start=1))
 
@@ -56,7 +63,7 @@ def _text(message) -> str:
 class ClaudeRagLLM:
     def __init__(self, settings: Settings, client: anthropic.Anthropic | None = None):
         self.settings = settings
-        self.client = client or anthropic.Anthropic()
+        self.client = client or anthropic.Anthropic(**client_options())
 
     def grade(self, question: str, chunks: list[Chunk]) -> list[int]:
         """Returns 0-based indices of chunks that help answer the question."""
