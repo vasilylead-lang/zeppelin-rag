@@ -8,8 +8,8 @@
 
 | metric | mean |
 |---|---|
-| faithfulness | 0.981 |
-| answer_relevancy | 0.829 |
-| context_recall | 0.970 |
-| context_precision_with_reference | 0.960 |
-| factual_correctness | 0.458 |
+| faithfulness | 0.974 |
+| answer_relevancy | 0.823 |
+| context_recall | 0.899 |
+| context_precision_with_reference | 0.920 |
+| factual_correctness | 0.724 |
