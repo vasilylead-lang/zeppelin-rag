@@ -216,6 +216,65 @@ iCloud помечает файлы `.venv` скрытыми. Python 3.12.12+ п�
 rm -rf .venv && mkdir .venv.nosync && ln -s .venv.nosync .venv && uv sync
 ```
 
+## Telegram-бот
+
+Бот [@zeppelin_asking_bot](https://t.me/zeppelin_asking_bot) отвечает на вопросы через
+тот же граф. Он работает в режиме long polling, поэтому ему не нужен ни публичный
+адрес, ни HTTPS.
+
+- `/start`, `/help` — приветствие и примеры вопросов;
+- любой текст — вопрос. Ответ приходит со списком источников `[n]`;
+- лимит — 20 вопросов в сутки на пользователя (`TELEGRAM_DAILY_LIMIT`), потому что
+  каждый вопрос тратит кредиты Anthropic. Счётчики хранятся в памяти и обнуляются в
+  полночь и при перезапуске;
+- `TELEGRAM_ALLOWED_USERS` — белый список ID пользователей. Пусто — бот открыт всем;
+- вопросы длиннее 500 символов отклоняются.
+
+Запуск локально (токен — в `.env`, см. [.env.example](.env.example)):
+
+```bash
+uv run zeppelin-bot
+```
+
+Одновременно может работать только один экземпляр бота. Если запустить второй,
+например на сервере, Telegram вернёт первому ошибку `Conflict`. Перед запуском на
+сервере остановите локальный.
+
+### Развёртывание на сервере (systemd)
+
+На сервере с Linux и systemd под root:
+
+```bash
+git clone https://github.com/vasilylead-lang/zeppelin-rag.git /opt/zeppelin-rag
+cd /opt/zeppelin-rag
+cp .env.example .env && nano .env   # TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID
+bash deploy/install.sh
+```
+
+[deploy/install.sh](deploy/install.sh) ставит `uv` и создаёт системного пользователя
+`zeppelin`. Затем он устанавливает зависимости, скачивает модель эмбеддингов (~220 МБ)
+и запускает службу [deploy/zeppelin-bot.service](deploy/zeppelin-bot.service) с
+автоперезапуском. Обновление после `git pull` — тот же `bash deploy/install.sh`.
+
+```bash
+journalctl -u zeppelin-bot -f      # логи
+systemctl restart zeppelin-bot     # перезапуск
+```
+
+Серверу нужно около 1 ГБ памяти и доступ к `api.telegram.org`, `api.anthropic.com`,
+PyPI и Hugging Face (для модели эмбеддингов).
+
+### Docker
+
+Если на сервере доступен Docker Hub, можно запустить через Docker:
+
+```bash
+docker compose up -d --build
+```
+
+Модель эмбеддингов попадает в образ при сборке, а `.env` передаётся при запуске и в
+образ не копируется.
+
 ## Настройки
 
 Всё задаётся переменными окружения, полный список — в [.env.example](.env.example).
@@ -251,6 +310,8 @@ src/zeppelin_rag/
   graph.py       # граф LangGraph: decompose -> retrieve -> grade -> rewrite/generate
   evaluate.py    # оценка RAGAS
   cli.py         # zeppelin-ask
+  telegram_bot.py # zeppelin-bot: Telegram-бот поверх графа
 data/knowledge/  # база знаний
 data/eval/       # тестовый набор
+deploy/          # systemd-служба и скрипт установки на сервер
 ```

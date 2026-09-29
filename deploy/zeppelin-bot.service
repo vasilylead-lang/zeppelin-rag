@@ -1,0 +1,22 @@
+[Unit]
+Description=Zeppelin RAG Telegram bot (@zeppelin_asking_bot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zeppelin
+Group=zeppelin
+WorkingDirectory=/opt/zeppelin-rag
+# Holds TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID; chmod 600.
+EnvironmentFile=/opt/zeppelin-rag/.env
+Environment=FASTEMBED_CACHE_PATH=/opt/zeppelin-rag/.cache/fastembed
+ExecStart=/usr/local/bin/uv run --locked --no-dev zeppelin-bot
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

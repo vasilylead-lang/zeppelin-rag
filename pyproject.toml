@@ -14,12 +14,14 @@ dependencies = [
     "langgraph>=1.2.12",
     "numpy>=2.5.3",
     "python-dotenv>=1.2.3",
+    "python-telegram-bot>=22.8",
     "ragas>=0.4.3",
 ]
 
 [project.scripts]
 zeppelin-ask = "zeppelin_rag.cli:main"
 zeppelin-eval = "zeppelin_rag.evaluate:main"
+zeppelin-bot = "zeppelin_rag.telegram_bot:main"
 
 [build-system]
 requires = ["uv_build>=0.12.14,<0.13.0"]
