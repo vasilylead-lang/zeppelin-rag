@@ -23,6 +23,11 @@ class Settings:
     top_k: int = 4
     lexical_weight: float = 0.5
     max_rewrites: int = 2
+    # Split the question into sub-queries and fuse their results (reciprocal rank fusion).
+    multi_query: bool = True
+    max_subqueries: int = 3
+    # Upper bound on fused chunks passed to the grader in multi-query mode.
+    max_chunks: int = 8
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -36,4 +41,8 @@ class Settings:
             top_k=int(os.getenv("ZEPPELIN_TOP_K", defaults.top_k)),
             lexical_weight=float(os.getenv("ZEPPELIN_LEXICAL_WEIGHT", defaults.lexical_weight)),
             max_rewrites=int(os.getenv("ZEPPELIN_MAX_REWRITES", defaults.max_rewrites)),
+            multi_query=os.getenv("ZEPPELIN_MULTI_QUERY", "1" if defaults.multi_query else "0")
+            not in ("0", "false", "no"),
+            max_subqueries=int(os.getenv("ZEPPELIN_MAX_SUBQUERIES", defaults.max_subqueries)),
+            max_chunks=int(os.getenv("ZEPPELIN_MAX_CHUNKS", defaults.max_chunks)),
         )

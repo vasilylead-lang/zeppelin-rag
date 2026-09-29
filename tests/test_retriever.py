@@ -29,3 +29,19 @@ def test_lexical_weight_rescues_rare_term(chunks):
     query = "Daimler-Benz"  # not in the embedder vocabulary
 
     assert hybrid.search(query, k=1)[0].section == "Раздел 3"
+
+
+def test_search_many_fuses_rankings_without_duplicates(chunks):
+    index = HybridIndex(chunks, KeywordEmbedder())
+
+    results = index.search_many(["двигатель", "гелий водород", "гелий"], k=1, limit=3)
+
+    # "Раздел 1" is the top hit of two queries, so it outranks "Раздел 3" (one query)
+    # even though "двигатель" came first; the repeated hit appears once.
+    assert [c.section for c in results] == ["Раздел 1", "Раздел 3"]
+
+
+def test_search_many_respects_limit(chunks):
+    index = HybridIndex(chunks, KeywordEmbedder())
+
+    assert len(index.search_many(["гелий", "двигатель", "удлинение"], k=2, limit=2)) == 2

@@ -1,10 +1,13 @@
-"""Corrective RAG as a LangGraph state machine.
+"""Corrective RAG with multi-query retrieval as a LangGraph state machine.
 
-retrieve -> grade +--(relevant chunks found)--> generate -> END
-                  +--(nothing relevant)--> rewrite -> retrieve   (at most max_rewrites times)
+decompose -> retrieve -> grade +--(relevant chunks found)--> generate -> END
+                                +--(nothing relevant)--> rewrite -> retrieve  (max_rewrites)
 
-If rewrites are exhausted, generate still runs on the last retrieved chunks and
-the answer prompt tells the model to admit when the knowledge base has no answer.
+decompose splits the question into sub-queries (the question itself stays first);
+retrieve searches each and fuses the rankings. With multi_query off, the question
+is the only query and decompose makes no LLM call. If rewrites are exhausted,
+generate still runs on the last retrieved chunks and the answer prompt tells the
+model to admit when the knowledge base has no answer.
 """
 
 import operator
@@ -20,7 +23,7 @@ from zeppelin_rag.retriever import HybridIndex
 
 class RAGState(TypedDict, total=False):
     question: str
-    query: str
+    queries: list[str]
     retrieved: list[Chunk]
     documents: list[Chunk]
     answer: str
@@ -29,10 +32,23 @@ class RAGState(TypedDict, total=False):
 
 
 def build_graph(index: HybridIndex, llm: RagLLM, settings: Settings):
+    def decompose(state: RAGState) -> RAGState:
+        question = state["question"]
+        if not settings.multi_query:
+            return {"queries": [question]}
+        queries = [question]
+        for sub in llm.decompose(question, settings.max_subqueries):
+            if sub not in queries:
+                queries.append(sub)
+        return {"queries": queries, "steps": [f"decompose: {' | '.join(queries[1:])}"]}
+
     def retrieve(state: RAGState) -> RAGState:
-        query = state.get("query") or state["question"]
-        chunks = index.search(query, settings.top_k)
-        return {"query": query, "retrieved": chunks, "steps": [f"retrieve: {query}"]}
+        queries = state["queries"]
+        if len(queries) == 1:
+            chunks = index.search(queries[0], settings.top_k)
+        else:
+            chunks = index.search_many(queries, settings.top_k, settings.max_chunks)
+        return {"retrieved": chunks, "steps": [f"retrieve: {len(queries)} queries"]}
 
     def grade(state: RAGState) -> RAGState:
         retrieved = state["retrieved"]
@@ -41,9 +57,9 @@ def build_graph(index: HybridIndex, llm: RagLLM, settings: Settings):
         return {"documents": documents, "steps": [f"grade: {len(documents)}/{len(retrieved)}"]}
 
     def rewrite(state: RAGState) -> RAGState:
-        query = llm.rewrite(state["question"], state["query"])
+        query = llm.rewrite(state["question"], " | ".join(state["queries"]))
         return {
-            "query": query,
+            "queries": [query],
             "rewrites": state.get("rewrites", 0) + 1,
             "steps": [f"rewrite: {query}"],
         }
@@ -59,11 +75,13 @@ def build_graph(index: HybridIndex, llm: RagLLM, settings: Settings):
         return "rewrite"
 
     builder = StateGraph(RAGState)
+    builder.add_node("decompose", decompose)
     builder.add_node("retrieve", retrieve)
     builder.add_node("grade", grade)
     builder.add_node("rewrite", rewrite)
     builder.add_node("generate", generate)
-    builder.add_edge(START, "retrieve")
+    builder.add_edge(START, "decompose")
+    builder.add_edge("decompose", "retrieve")
     builder.add_edge("retrieve", "grade")
     builder.add_conditional_edges(
         "grade", after_grade, {"generate": "generate", "rewrite": "rewrite"}

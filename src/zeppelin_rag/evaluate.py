@@ -145,6 +145,12 @@ def write_reports(rows: list[dict], summary: dict, settings: Settings, out_dir: 
         f"- judge: `{settings.judge_model}`",
         f"- embeddings: `{settings.embedding_model}`, top_k={settings.top_k}, "
         f"lexical_weight={settings.lexical_weight}",
+        f"- multi-query: {'on' if settings.multi_query else 'off'}"
+        + (
+            f", max_subqueries={settings.max_subqueries}, max_chunks={settings.max_chunks}"
+            if settings.multi_query
+            else ""
+        ),
         "",
         "| metric | mean |",
         "|---|---|",

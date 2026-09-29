@@ -17,9 +17,14 @@ class KeywordEmbedder:
 class FakeLLM:
     """Scripted RagLLM: grade() answers come from a queue, one per call."""
 
-    def __init__(self, grades: list[list[int]]):
+    def __init__(self, grades: list[list[int]], subqueries: list[str] | None = None):
         self.grades = list(grades)
+        self.subqueries = subqueries or []
         self.calls: list[str] = []
+
+    def decompose(self, question, limit):
+        self.calls.append("decompose")
+        return self.subqueries[:limit]
 
     def grade(self, question, chunks):
         self.calls.append("grade")

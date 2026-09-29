@@ -32,8 +32,27 @@ REWRITE_PROMPT = """Поиск по базе знаний о дирижабля�
 Верни только новый запрос одной строкой."""
 
 
+DECOMPOSE_PROMPT = """Вопрос к базе знаний о дирижаблях: {question}
+
+Составь не более {limit} коротких поисковых подзапросов, чтобы найти все фрагменты,
+нужные для полного ответа. Каждый подзапрос — про отдельный аспект вопроса или про
+связанный объект: характеристики упомянутого корабля, его двигатели, устройство,
+физическое явление, причину или следствие.
+
+Пиши подзапросы ключевыми словами с конкретными названиями и терминами: названия и
+номера кораблей (например, «LZ 127 Граф Цеппелин»), типы двигателей, физические
+величины, имена, даты. Не используй общие слова вроде «свойства», «применение»,
+«оснащение», «преимущества»: они ухудшают поиск.
+
+Если вопрос простой и узкий, верни один подзапрос. Не повторяй исходный вопрос дословно."""
+
+
 class RelevantChunks(BaseModel):
     relevant: list[int] = Field(description="Номера релевантных фрагментов")
+
+
+class SubQueries(BaseModel):
+    queries: list[str] = Field(description="Поисковые подзапросы")
 
 
 class RefusalError(RuntimeError):
@@ -41,6 +60,7 @@ class RefusalError(RuntimeError):
 
 
 class RagLLM(Protocol):
+    def decompose(self, question: str, limit: int) -> list[str]: ...
     def grade(self, question: str, chunks: list[Chunk]) -> list[int]: ...
     def rewrite(self, question: str, query: str) -> str: ...
     def answer(self, question: str, chunks: list[Chunk]) -> str: ...
@@ -64,6 +84,21 @@ class ClaudeRagLLM:
     def __init__(self, settings: Settings, client: anthropic.Anthropic | None = None):
         self.settings = settings
         self.client = client or anthropic.Anthropic(**client_options())
+
+    def decompose(self, question: str, limit: int) -> list[str]:
+        response = self.client.messages.parse(
+            model=self.settings.fast_model,
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "user",
+                    "content": DECOMPOSE_PROMPT.format(question=question, limit=limit),
+                }
+            ],
+            output_format=SubQueries,
+        )
+        queries = response.parsed_output.queries if response.parsed_output else []
+        return [q.strip() for q in queries if q.strip()][:limit]
 
     def grade(self, question: str, chunks: list[Chunk]) -> list[int]:
         """Returns 0-based indices of chunks that help answer the question."""

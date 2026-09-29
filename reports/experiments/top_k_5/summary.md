@@ -5,6 +5,7 @@
 - grader / rewriter: `claude-haiku-4-5`
 - judge: `claude-sonnet-5`
 - embeddings: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, top_k=5, lexical_weight=0.5
+- multi-query: off
 
 | metric | mean |
 |---|---|

@@ -81,3 +81,18 @@ class HybridIndex:
         w = self.lexical_weight
         scores = (1 - w) * _min_max(dense) + w * _min_max(lexical)
         return [self.chunks[i] for i in np.argsort(-scores)[:k]]
+
+    def search_many(self, queries: list[str], k: int, limit: int, rrf_k: int = 60) -> list[Chunk]:
+        """Searches every query and merges the rankings with reciprocal rank fusion.
+
+        A chunk scores sum(1 / (rrf_k + rank)) over the queries that return it, so
+        chunks found by several sub-queries rise to the top.
+        """
+        scores: dict[str, float] = {}
+        by_id: dict[str, Chunk] = {}
+        for query in queries:
+            for rank, chunk in enumerate(self.search(query, k), start=1):
+                scores[chunk.id] = scores.get(chunk.id, 0.0) + 1 / (rrf_k + rank)
+                by_id[chunk.id] = chunk
+        ranked = sorted(scores, key=scores.__getitem__, reverse=True)
+        return [by_id[chunk_id] for chunk_id in ranked[:limit]]
